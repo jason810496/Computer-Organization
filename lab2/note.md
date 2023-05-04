@@ -1,0 +1,4 @@
+- input function : 
+    - must add `printf("1")` in front of function ( can't add newline after output )
+- asm file : 
+    - don't add any comment in file 
