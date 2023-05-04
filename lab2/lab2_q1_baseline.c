@@ -1,8 +1,26 @@
-// TODO : 
-"lw t0, 0(%[h])\n\t" // load value at p_a into register t0
-"lw t1, 0(%[x])\n\t" // load value at p_b into register t1
-"add t2, t0, t1\n\t" // subtract t1 from t0 and store result in memory at p_c
-"sw t2,0(%[y])\n\t"
-"addi %[h], %[h], 4\n\t" // increment p_a
-"addi %[x], %[x], 4\n\t" // increment p_b
-"addi %[y], %[y], 4\n\t" // increment p_c
+"li t4,16\n\t"
+"li t3,0\n\t"
+"addi %[lw_cnt], %[lw_cnt], 2\n\t" // %[lw_cnt] 
+
+"outer:\n\t"
+    "addi t3, t3 , 1\n\t" 
+    "addi %[arith_cnt], %[arith_cnt], 1\n\t" // %[arith_cnt]
+
+    "lw t0, 0(%[h])\n\t" 
+    "lw t1, 0(%[x])\n\t" 
+    "addi %[lw_cnt], %[lw_cnt], 2\n\t" // %[lw_cnt] 
+
+    "add t2, t0, t1\n\t" 
+    "addi %[arith_cnt], %[arith_cnt], 1\n\t" // %[arith_cnt]
+
+    "sw t2,0(%[y])\n\t"
+    "addi %[sw_cnt], %[sw_cnt], 1\n\t" // %[arith_cnt]
+    
+
+    "addi %[h], %[h], 4\n\t" 
+    "addi %[x], %[x], 4\n\t" 
+    "addi %[y], %[y], 4\n\t" 
+    "addi %[arith_cnt], %[arith_cnt], 3\n\t" // %[arith_cnt]
+
+"bne t3, t4, outer\n\t" // if i < 16, go to outer loop
+"addi %[others_cnt], %[others_cnt], 1\n\t" // %[lw_cnt]

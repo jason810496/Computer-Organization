@@ -67,7 +67,7 @@ void improved(){
 	asm volatile(
 		#include "lab2_q1_improved.c"
 
-	: [h] "+r"(p_h), [x] "+r"(p_x), [y] "+r"(p_y), [arith_cnt] "+r"(arith_cnt), [lw_cnt] "+r"(lw_cnt), [sw_cnt] "+r"(sw_cnt), [others_cnt] "+r"(others_cnt)
+		: [h] "+r"(p_h), [x] "+r"(p_x), [y] "+r"(p_y), [arith_cnt] "+r"(arith_cnt), [lw_cnt] "+r"(lw_cnt), [sw_cnt] "+r"(sw_cnt), [others_cnt] "+r"(others_cnt)
 	);
 
     printf("\n===== Vector Question 1 =====\n");
