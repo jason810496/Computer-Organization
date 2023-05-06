@@ -48,6 +48,7 @@ int main(int argc, char *argv[]){
 }
 
 void input(int number){
+    printf("1");
     if(number <= 0 || number > 10){
         printf("\nInvalid input!!!! (TEST_DATA please enter 1~10)\n");
         exit(0);
