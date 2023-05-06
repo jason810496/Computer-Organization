@@ -50,11 +50,17 @@ void baseline(){
 	
 	macro_baseline_cycle_count
 
+	// new added
+	baseline_cycle_count = arith_cnt + lw_cnt + sw_cnt + others_cnt;
+
 	printf("The total cycle count in this program: %d\n", baseline_cycle_count);
 
 	printf("\n===== Baseline Question 3 =====\n");
 
 	macro_baseline_cpu_time
+
+	// new added
+	baseline_cpu_time = baseline_cycle_count * cycle_time;
 
 	printf("CPU time = %f us\n", baseline_cpu_time);
 }
