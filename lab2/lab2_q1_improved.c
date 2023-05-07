@@ -1,10 +1,9 @@
-"li a0,16\n\t"
+"li a1,16\n\t"
 "loop:\n\t"
-    "vsetvli t0, a1, e32, ta, ma\n\t"
-        "sub a0,a0,t0\n\t" // Decrement number done
-        "slli t0, t0, 2\n\t" // Multiply number done by 4 bytes
-
+    "vsetvli t0, a1, e32\n\t"
         "vle32.v v0,(%[h])\n\t" // Get first vector
+        "sub a1,a1,t0\n\t" // Decrement number done
+        "slli t0, t0, 2\n\t" // Multiply number done by 4 bytes
         "add %[h], %[h], t0\n\t"
 
         "vle32.v v1,(%[x])\n\t" // Get second vector
@@ -15,4 +14,4 @@
 
         "add %[y], %[y], t0\n\t" // Bump pointer
 
-"bnez a0, loop\n\t" // Loop back
+"bnez a1, loop\n\t" // Loop back
