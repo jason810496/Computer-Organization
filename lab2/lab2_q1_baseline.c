@@ -17,9 +17,9 @@
     "addi %[sw_cnt], %[sw_cnt], 1\n\t" // %[arith_cnt]
     
 
-    "addi %[h], %[h], 4\n\t" 
-    "addi %[x], %[x], 4\n\t" 
-    "addi %[y], %[y], 4\n\t" 
+    "addi %[h], %[h], 2\n\t" 
+    "addi %[x], %[x], 2\n\t" 
+    "addi %[y], %[y], 2\n\t" 
     "addi %[arith_cnt], %[arith_cnt], 3\n\t" // %[arith_cnt]
 
 "bne t3, t4, outer\n\t" // if i < 16, go to outer loop
