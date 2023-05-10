@@ -51,7 +51,7 @@ void baseline(){
 	macro_baseline_cycle_count
 
 	// new added
-	baseline_cycle_count = arith_cnt + lw_cnt + sw_cnt + others_cnt;
+	baseline_cycle_count = arith_cnt * arith_CPI + lw_cnt * lw_CPI + sw_cnt * sw_CPI + others_cnt * others_CPI;
 
 	printf("The total cycle count in this program: %d\n", baseline_cycle_count);
 
@@ -91,11 +91,17 @@ void improved(){
 	
 	macro_improved_cycle_count
 
+	// new added
+	improved_cycle_count = arith_cnt * arith_CPI + lw_cnt * lw_CPI + sw_cnt * sw_CPI + others_cnt * others_CPI;
+
 	printf("The total cycle count in this program: %d\n", improved_cycle_count);
 
 	printf("\n===== Vector Question 3 =====\n");
 
 	macro_improved_cpu_time
+
+	// new added
+	improved_cpu_time = improved_cycle_count * cycle_time;
 
 	printf("CPU time = %f us\n", improved_cpu_time);
 	printf("\n===== Vector Question 4 =====\n");
