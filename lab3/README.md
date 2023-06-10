@@ -1,4 +1,4 @@
-# Cache
+# Developing the L1 Cache for the μRISC-V Processor
 
 ## Reference to source code 
 All the source code are list in `/home/ubuntu/riscv/include/riscv`.
@@ -47,16 +47,54 @@ After tracing down the cachesim source code , I found some most critical part of
     - `check_tag` 
     - `victimize`
 
-For implemetation , we just need to change `tags` member in `fa_cache_sim_t` to appropriate data structure with different cache policy .
+For implemetation , we just need to change `tags` member ( or add other helper members ) in `fa_cache_sim_t` with appropriate data structure depends on different cache policy .
 
 ## Implementation 
-An experienced classmate , [Chumy](https://github.com/Jimmy01240397)  wrote a brute force script ([`bruteforce.sh`]() ) to enumerate all possible `Set` ,`Way` , and `BlockSize` .
+An experienced classmate , [Chumy](https://github.com/Jimmy01240397)  wrote a brute force script to enumerate all possible `Set` ,`Way` , and `BlockSize` .
 
-Based on original script ,  I add some code to print best miss rate result in the end of `output.txt`.
+Based on [original script](https://github.com/jason810496/Computer-Architecture/blob/main/lab3/chumy.sh) ,  I add some code to print best miss rate result in the end of `output.txt`. ( [bruteforce.sh](https://github.com/jason810496/Computer-Architecture/blob/main/lab3/bruteforce.sh) )
+
 ### ORIG
 The original cachesim use `LFSR` ( Linear feedback shift register ) , 
 
 #### Testing
+```
+=======================================================================
+Data Cache Setting with: 1:8:8
+Miss Rate: 50.0967 %
+=======================================================================
+Data Cache Setting with: 2:4:8
+Miss Rate: 50.1563 %
+=======================================================================
+Data Cache Setting with: 4:2:8
+Miss Rate: 50.3273 %
+=======================================================================
+Data Cache Setting with: 8:1:8
+Miss Rate: 52.0297 %
+=======================================================================
+Data Cache Setting with: 1:4:16
+Miss Rate: 39.0397 %
+=======================================================================
+Data Cache Setting with: 2:2:16
+Miss Rate: 39.0293 %
+=======================================================================
+Data Cache Setting with: 4:1:16
+Miss Rate: 40.45 %
+=======================================================================
+Data Cache Setting with: 1:2:32
+Miss Rate: 35.9197 %
+=======================================================================
+Data Cache Setting with: 2:1:32
+Miss Rate: 35.4987 %
+=======================================================================
+Data Cache Setting with: 1:1:64
+Miss Rate: 36.4023 %
+=======================================================================
+Policy: orig
+The best data cache setting is:
+Setting: Set = 2, Way = 1, BlockSize = 32
+Miss Rate: 35.4987
+```
 
 ### FIFO
 
@@ -76,14 +114,173 @@ class fa_cache_sim_t : public cache_sim_t
 };
 ```
 - update `check_tag` method : 
-    - using `std::find_if` ( should include `algorithm` ) to 
+    - using `std::find_if` ( should include `algorithm` ) to find tag
+- update `victimize` method : 
+    - using `push_back` and `pop_back` as a FIFO queue
 
 #### Testing
+```
+=======================================================================
+Data Cache Setting with: 1:8:8
+Miss Rate: 50.0967 %
+=======================================================================
+Data Cache Setting with: 2:4:8
+Miss Rate: 50.1563 %
+=======================================================================
+Data Cache Setting with: 4:2:8
+Miss Rate: 50.3273 %
+=======================================================================
+Data Cache Setting with: 8:1:8
+Miss Rate: 52.0297 %
+=======================================================================
+Data Cache Setting with: 1:4:16
+Miss Rate: 39.0397 %
+=======================================================================
+Data Cache Setting with: 2:2:16
+Miss Rate: 39.0293 %
+=======================================================================
+Data Cache Setting with: 4:1:16
+Miss Rate: 40.45 %
+=======================================================================
+Data Cache Setting with: 1:2:32
+Miss Rate: 35.9197 %
+=======================================================================
+Data Cache Setting with: 2:1:32
+Miss Rate: 35.4987 %
+=======================================================================
+Data Cache Setting with: 1:1:64
+Miss Rate: 36.4023 %
+=======================================================================
+Policy: fifo
+The best data cache setting is:
+Setting: Set = 2, Way = 1, BlockSize = 32
+Miss Rate: 35.4987
+```
 
-## LRU
-Least Recentlu Use
-- time stamp queue : store last access element
+### LFU
 
+For `LFU` ( Least Frequently Used ) I add another member `freq` ( which type is `std::map` ) for counting element access frequency . 
+- update `tags` member :
+```cpp
+class fa_cache_sim_t : public cache_sim_t
+{
+ public:
+  fa_cache_sim_t(size_t ways, size_t linesz, const char* name);
+  uint64_t* check_tag(uint64_t addr);
+  uint64_t victimize(uint64_t addr);
+ private:
+  static bool cmp(uint64_t a, uint64_t b);
+  std::map<uint64_t, uint64_t> tags;
+  std::map<uint64_t, uint64_t> freq; // updated !!!
+};
+```
+- update `check_tag` method : 
+    - increase `freq[addr >> idx_shift]`
+    - the rest is same as `ORIG`
+- update `victimize` method : 
+    - using `std::min_element` ( should include `algorithm` ) to find least frequncy used element
+
+#### Testing
+```
+=======================================================================
+Data Cache Setting with: 1:8:8
+Miss Rate: 52.498 %
+=======================================================================
+Data Cache Setting with: 2:4:8
+Miss Rate: 50.1563 %
+=======================================================================
+Data Cache Setting with: 4:2:8
+Miss Rate: 50.3273 %
+=======================================================================
+Data Cache Setting with: 8:1:8
+Miss Rate: 52.0297 %
+=======================================================================
+Data Cache Setting with: 1:4:16
+Miss Rate: 39.0397 %
+=======================================================================
+Data Cache Setting with: 2:2:16
+Miss Rate: 39.0293 %
+=======================================================================
+Data Cache Setting with: 4:1:16
+Miss Rate: 40.45 %
+=======================================================================
+Data Cache Setting with: 1:2:32
+Miss Rate: 35.9197 %
+=======================================================================
+Data Cache Setting with: 2:1:32
+Miss Rate: 35.4987 %
+=======================================================================
+Data Cache Setting with: 1:1:64
+Miss Rate: 36.4023 %
+=======================================================================
+Policy: lfu
+The best data cache setting is:
+Setting: Set = 2, Way = 1, BlockSize = 32
+Miss Rate: 35.4987
+```
+
+### LRU
+
+For `LRU` ( Least Recently Used ) I add another member `stamp` ( which type is `std::map` ) for counting element access frequency . 
+- update `tags` member :
+```cpp
+class fa_cache_sim_t : public cache_sim_t
+{
+ public:
+  fa_cache_sim_t(size_t ways, size_t linesz, const char* name);
+  uint64_t* check_tag(uint64_t addr);
+  uint64_t victimize(uint64_t addr);
+ private:
+  static bool cmp(uint64_t a, uint64_t b);
+  std::map<uint64_t, uint64_t> tags;
+  std::map<uint64_t, uint64_t> stamp; // updated !!!
+  uint64_t stamp_counter = 0;         // updated !!! 
+};
+```
+- update `check_tag` method : 
+    - increase `stamp_counter` and update to `freq[addr >> idx_shift]`
+    - the rest is same as `ORIG`
+- update `victimize` method : 
+    - using `std::min_element` ( should include `algorithm` ) to find least recently used element
+
+#### Testing
+```
+=======================================================================
+Data Cache Setting with: 1:8:8
+Miss Rate: 48.898 %
+=======================================================================
+Data Cache Setting with: 2:4:8
+Miss Rate: 50.1563 %
+=======================================================================
+Data Cache Setting with: 4:2:8
+Miss Rate: 50.3273 %
+=======================================================================
+Data Cache Setting with: 8:1:8
+Miss Rate: 52.0297 %
+=======================================================================
+Data Cache Setting with: 1:4:16
+Miss Rate: 39.0397 %
+=======================================================================
+Data Cache Setting with: 2:2:16
+Miss Rate: 39.0293 %
+=======================================================================
+Data Cache Setting with: 4:1:16
+Miss Rate: 40.45 %
+=======================================================================
+Data Cache Setting with: 1:2:32
+Miss Rate: 35.9197 %
+=======================================================================
+Data Cache Setting with: 2:1:32
+Miss Rate: 35.4987 %
+=======================================================================
+Data Cache Setting with: 1:1:64
+Miss Rate: 36.4023 %
+=======================================================================
+Policy: lru
+The best data cache setting is:
+Setting: Set = 2, Way = 1, BlockSize = 32
+Miss Rate: 35.4987
+```
 
 ## My tools
 - `ssh`
