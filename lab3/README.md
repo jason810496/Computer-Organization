@@ -160,7 +160,6 @@ Miss Rate: 35.4987
 ### LFU
 
 For `LFU` ( Least Frequently Used ) I add another member `freq` ( which type is `std::map` ) for counting element access frequency . 
-- update `tags` member :
 ```cpp
 class fa_cache_sim_t : public cache_sim_t
 {
@@ -222,7 +221,6 @@ Miss Rate: 35.4987
 ### LRU
 
 For `LRU` ( Least Recently Used ) I add another member `stamp` ( which type is `std::map` ) for counting element access frequency . 
-- update `tags` member :
 ```cpp
 class fa_cache_sim_t : public cache_sim_t
 {
