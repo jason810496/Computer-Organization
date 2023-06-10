@@ -2,9 +2,11 @@
 
 #include "cachesim.h"
 #include "common.h"
+// #include "FIFO_cachesim.h" // for local testing 
 #include <cstdlib>
 #include <iostream>
 #include <iomanip>
+#include <algorithm> // std::find_if
 
 cache_sim_t::cache_sim_t(size_t _sets, size_t _ways, size_t _linesz, const char* _name)
 : sets(_sets), ways(_ways), linesz(_linesz), name(_name), log(false)
@@ -191,20 +193,37 @@ fa_cache_sim_t::fa_cache_sim_t(size_t ways, size_t linesz, const char* name)
 
 uint64_t* fa_cache_sim_t::check_tag(uint64_t addr)
 {
-  auto it = tags.find(addr >> idx_shift);
+  // auto it = tags.find(addr >> idx_shift);
+  // return it == tags.end() ? NULL : &it->second;
+
+  // map -> list<pair>
+  const uint64_t value = addr >> idx_shift;
+  auto it = std::find_if(tags.begin(), tags.end(),
+                        [value](std::pair<uint64_t, uint64_t> const &b) { 
+                            return b.first == value; 
+                        });
   return it == tags.end() ? NULL : &it->second;
 }
 
 uint64_t fa_cache_sim_t::victimize(uint64_t addr)
 {
+  // uint64_t old_tag = 0;
+  // if (tags.size() == ways)
+  // {
+  //   auto it = tags.begin();
+  //   std::advance(it, lfsr.next() % ways);
+  //   old_tag = it->second;
+  //   tags.erase(it);
+  // }
+  // tags[addr >> idx_shift] = (addr >> idx_shift) | VALID;
+  // return old_tag;
+
   uint64_t old_tag = 0;
   if (tags.size() == ways)
   {
-    auto it = tags.begin();
-    std::advance(it, lfsr.next() % ways);
-    old_tag = it->second;
-    tags.erase(it);
+    old_tag = tags.front().second;
+    tags.pop_front();
   }
-  tags[addr >> idx_shift] = (addr >> idx_shift) | VALID;
+  tags.push_back(std::make_pair( addr >> idx_shift , (addr >> idx_shift)|VALID ));
   return old_tag;
 }
