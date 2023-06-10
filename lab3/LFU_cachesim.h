@@ -75,6 +75,7 @@ class fa_cache_sim_t : public cache_sim_t
  private:
   static bool cmp(uint64_t a, uint64_t b);
   std::map<uint64_t, uint64_t> tags;
+  std::map<uint64_t, uint64_t> freq;
 };
 
 class cache_memtracer_t : public memtracer_t

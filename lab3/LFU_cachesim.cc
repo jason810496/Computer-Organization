@@ -2,9 +2,12 @@
 
 #include "cachesim.h"
 #include "common.h"
+// #include "LFU_cachesim.h"
 #include <cstdlib>
 #include <iostream>
 #include <iomanip>
+#include <utility>
+#include <algorithm>
 
 cache_sim_t::cache_sim_t(size_t _sets, size_t _ways, size_t _linesz, const char* _name)
 : sets(_sets), ways(_ways), linesz(_linesz), name(_name), log(false)
@@ -191,6 +194,7 @@ fa_cache_sim_t::fa_cache_sim_t(size_t ways, size_t linesz, const char* name)
 
 uint64_t* fa_cache_sim_t::check_tag(uint64_t addr)
 {
+  freq[addr >> idx_shift]++; // update frequency
   auto it = tags.find(addr >> idx_shift);
   return it == tags.end() ? NULL : &it->second;
 }
@@ -200,10 +204,14 @@ uint64_t fa_cache_sim_t::victimize(uint64_t addr)
   uint64_t old_tag = 0;
   if (tags.size() == ways)
   {
-    auto it = tags.begin();
-    std::advance(it, lfsr.next() % ways);
-    old_tag = it->second;
-    tags.erase(it);
+    // least frequently used
+    std::pair<uint64_t, uint64_t> lst = *std::min_element(tags.begin(), tags.end(),
+      [this](const std::pair<uint64_t, uint64_t>& a, const std::pair<uint64_t, uint64_t>& b) {
+        return freq[a.first] < freq[b.first];
+    });
+
+    old_tag = lst.second;
+    tags.erase(lst.first);
   }
   tags[addr >> idx_shift] = (addr >> idx_shift) | VALID;
   return old_tag;
