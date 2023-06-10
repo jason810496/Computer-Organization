@@ -15,6 +15,7 @@
     "sw t2,0(%[y]);"
     "addi %[sw_cnt], %[sw_cnt], 1;" 
     
+
     "addi %[h], %[h], 2;" 
     "addi %[x], %[x], 2;" 
     "addi %[y], %[y], 2;" 
