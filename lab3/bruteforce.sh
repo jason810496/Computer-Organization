@@ -3,7 +3,6 @@
 saveconf="$(cat config.conf)"
 eval $(sed 's/ //g;s/\[.*\]//g' config.conf)
 make $Policy
-echo "Policy: "$Policy
 
 # init variables
 bestMissRate=999
@@ -36,6 +35,7 @@ do
 done
 
 echo "=======================================================================" >> output.txt
+echo "Policy: "$Policy >> output.txt
 echo "The best data cache setting is:" >> output.txt
 echo "Setting: Set = $((2**$bestSet)), Way = $((2**$bestWay)), BlockSize = $((2**$bestBlock))" >> output.txt
 echo "Miss Rate: "$bestMissRate >> output.txt
