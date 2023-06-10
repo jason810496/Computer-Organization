@@ -281,12 +281,16 @@ Miss Rate: 35.4987
 ```
 
 ## My tools
+- `ngrok`
+```
+ngrok tcp 22
+```
 - `ssh`
 ```
 ssh USER@tcp://0.tcp.jp.ngrok.io -p PORT                            
 ```
 <!-- ssh ubuntu@tcp://0.tcp.jp.ngrok.io -p 14864                             -->
-- `ngrok` + `rsync`
+- `rsync`
 ```
 rsync -r -av -e "ssh SERVER_USER@0.tcp.jp.ngrok.io -p PORT" lab3 :SERVER_DIR_PATH --progress
 ```
