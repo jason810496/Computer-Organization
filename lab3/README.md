@@ -51,7 +51,7 @@ For implemetation , we just need to change `check_tag` and `victimize` methods (
 ## Implementation 
 An experienced classmate , [Chumy](https://github.com/Jimmy01240397)  wrote a brute force script to enumerate all possible `Set` ,`Way` , and `BlockSize` .
 
-Based on [original script](https://github.com/jason810496/Computer-Architecture/blob/main/lab3/chumy.sh) ,  I add some code to print best miss rate result in the end of `output.txt`. ( [bruteforce.sh](https://github.com/jason810496/Computer-Architecture/blob/main/lab3/bruteforce.sh) )
+Based on [original script](https://github.com/jason810496/Computer-Organization/blob/main/lab3/chumy.sh) ,  I add some code to print best miss rate result in the end of `output.txt`. ( [bruteforce.sh](https://github.com/jason810496/Computer-Organization/blob/main/lab3/bruteforce.sh) )
 
 ### ORIG
 The original cachesim use `LFSR` ( Linear feedback shift register ) , 
