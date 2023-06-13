@@ -61,6 +61,7 @@ void cache_sim_t::init()
   writebacks = 0;
 
   miss_handler = NULL;
+  stamp_counter = 0;
 }
 
 cache_sim_t::cache_sim_t(const cache_sim_t& rhs)
@@ -105,21 +106,57 @@ void cache_sim_t::print_stats()
 
 uint64_t* cache_sim_t::check_tag(uint64_t addr)
 {
+  // size_t idx = (addr >> idx_shift) & (sets-1);
+  // size_t tag = (addr >> idx_shift) | VALID;
+
+  // for (size_t i = 0; i < ways; i++)
+  //   if (tag == (tags[idx*ways + i] & ~DIRTY))
+  //     return &tags[idx*ways + i];
+
+  // stamp[addr >> idx_shift] = stamp_counter++; // update time stamp
+  // auto it = tags.find(addr >> idx_shift);
+  // return it == tags.end() ? NULL : &it->second;
+
   size_t idx = (addr >> idx_shift) & (sets-1);
   size_t tag = (addr >> idx_shift) | VALID;
 
-  for (size_t i = 0; i < ways; i++)
-    if (tag == (tags[idx*ways + i] & ~DIRTY))
-      return &tags[idx*ways + i];
-
-  return NULL;
+  int found = -1;
+  for (size_t i = 0; i < ways; i++){
+    if (tag == (tags[idx*ways + i] & ~DIRTY)){
+      stamp[idx][i] = stamp_counter+1;
+      found = i;
+    }
+    else{
+      stamp[idx][i] = stamp[idx][i];
+    }
+  }
+  
+  stamp_counter++;
+  return (found<0 ? NULL : &tags[idx*ways + found] );
 }
 
 uint64_t cache_sim_t::victimize(uint64_t addr)
 {
+  // size_t idx = (addr >> idx_shift) & (sets-1);
+  // size_t way = lfsr.next() % ways;
+  // uint64_t victim = tags[idx*ways + way];
+  // tags[idx*ways + way] = (addr >> idx_shift) | VALID;
+  // return victim;
+
   size_t idx = (addr >> idx_shift) & (sets-1);
-  size_t way = lfsr.next() % ways;
+  size_t way = 0 ;
+  // least recently used
+  uint64_t recent = stamp[idx][0];
+  for (size_t i = 0; i < ways; i++){
+    if (stamp[idx][i] < recent){
+      recent = stamp[idx][i];
+      way = i;
+    }
+  }
+
   uint64_t victim = tags[idx*ways + way];
+  stamp[idx][way] = stamp_counter++;
+
   tags[idx*ways + way] = (addr >> idx_shift) | VALID;
   return victim;
 }
@@ -194,7 +231,6 @@ fa_cache_sim_t::fa_cache_sim_t(size_t ways, size_t linesz, const char* name)
 
 uint64_t* fa_cache_sim_t::check_tag(uint64_t addr)
 {
-  stamp[addr >> idx_shift] = stamp_counter++; // update time stamp
   auto it = tags.find(addr >> idx_shift);
   return it == tags.end() ? NULL : &it->second;
 }
@@ -204,14 +240,10 @@ uint64_t fa_cache_sim_t::victimize(uint64_t addr)
   uint64_t old_tag = 0;
   if (tags.size() == ways)
   {
-    // least recently used
-    std::pair<uint64_t, uint64_t> lst = *std::min_element(tags.begin(), tags.end(),
-      [this](const std::pair<uint64_t, uint64_t>& a, const std::pair<uint64_t, uint64_t>& b) {
-        return stamp[a.first] < stamp[b.first];
-    });
-
-    old_tag = lst.second;
-    tags.erase(lst.first);
+    auto it = tags.begin();
+    std::advance(it, lfsr.next() % ways);
+    old_tag = it->second;
+    tags.erase(it);
   }
   tags[addr >> idx_shift] = (addr >> idx_shift) | VALID;
   return old_tag;
