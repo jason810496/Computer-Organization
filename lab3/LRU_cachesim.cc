@@ -6,8 +6,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <iomanip>
-#include <utility>
-#include <algorithm>
 
 cache_sim_t::cache_sim_t(size_t _sets, size_t _ways, size_t _linesz, const char* _name)
 : sets(_sets), ways(_ways), linesz(_linesz), name(_name), log(false)
@@ -116,23 +114,18 @@ uint64_t* cache_sim_t::check_tag(uint64_t addr)
   // stamp[addr >> idx_shift] = stamp_counter++; // update time stamp
   // auto it = tags.find(addr >> idx_shift);
   // return it == tags.end() ? NULL : &it->second;
+  // ORIGINAL CODE END
 
   size_t idx = (addr >> idx_shift) & (sets-1);
   size_t tag = (addr >> idx_shift) | VALID;
 
-  int found = -1;
   for (size_t i = 0; i < ways; i++){
     if (tag == (tags[idx*ways + i] & ~DIRTY)){
-      stamp[idx][i] = stamp_counter+1;
-      found = i;
-    }
-    else{
-      stamp[idx][i] = stamp[idx][i];
+      stamp[idx*ways + i] = stamp_counter++;
+      return &tags[idx*ways + i];
     }
   }
-  
-  stamp_counter++;
-  return (found<0 ? NULL : &tags[idx*ways + found] );
+  return NULL;
 }
 
 uint64_t cache_sim_t::victimize(uint64_t addr)
@@ -142,22 +135,24 @@ uint64_t cache_sim_t::victimize(uint64_t addr)
   // uint64_t victim = tags[idx*ways + way];
   // tags[idx*ways + way] = (addr >> idx_shift) | VALID;
   // return victim;
+  // ORIGINAL CODE END
 
   size_t idx = (addr >> idx_shift) & (sets-1);
-  size_t way = 0 ;
+  
   // least recently used
-  uint64_t recent = stamp[idx][0];
+  size_t lru_index = 0 ;
+  uint64_t recent = stamp[idx*ways + 0];
   for (size_t i = 0; i < ways; i++){
-    if (stamp[idx][i] < recent){
-      recent = stamp[idx][i];
-      way = i;
+    if (stamp[idx*ways + i] < recent){
+      recent = stamp[idx*ways + i];
+      lru_index = i;
     }
   }
 
-  uint64_t victim = tags[idx*ways + way];
-  stamp[idx][way] = stamp_counter++;
+  uint64_t victim = tags[idx*ways + lru_index];
+  stamp[idx*ways + lru_index] = stamp_counter++;
 
-  tags[idx*ways + way] = (addr >> idx_shift) | VALID;
+  tags[idx*ways + lru_index] = (addr >> idx_shift) | VALID;
   return victim;
 }
 

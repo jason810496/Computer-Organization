@@ -63,7 +63,7 @@ class cache_sim_t
   std::string name;
   bool log;
 
-  std::map<uint64_t,std::map<uint64_t, uint64_t> > stamp;
+  std::map<uint64_t, uint64_t> stamp;
   uint64_t stamp_counter;
 
   void init();
