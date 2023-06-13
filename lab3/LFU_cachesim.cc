@@ -108,9 +108,13 @@ uint64_t* cache_sim_t::check_tag(uint64_t addr)
   size_t idx = (addr >> idx_shift) & (sets-1);
   size_t tag = (addr >> idx_shift) | VALID;
 
-  for (size_t i = 0; i < ways; i++)
-    if (tag == (tags[idx*ways + i] & ~DIRTY))
+  for (size_t i = 0; i < ways; i++){
+    if (tag == (tags[idx*ways + i] & ~DIRTY)){
+      freq[idx*ways + i]++;
       return &tags[idx*ways + i];
+    }
+      
+  }
 
   return NULL;
 }
@@ -118,9 +122,17 @@ uint64_t* cache_sim_t::check_tag(uint64_t addr)
 uint64_t cache_sim_t::victimize(uint64_t addr)
 {
   size_t idx = (addr >> idx_shift) & (sets-1);
-  size_t way = lfsr.next() % ways;
-  uint64_t victim = tags[idx*ways + way];
-  tags[idx*ways + way] = (addr >> idx_shift) | VALID;
+  // last frequently used
+  size_t lfu_index = 0;
+  uint64_t frequency = freq[idx*ways + 0];
+  for (size_t i = 0; i < ways; i++){
+    if (freq[idx*ways + i] < frequency){
+      frequency = freq[idx*ways + i];
+      lfu_index = i;
+    }
+  }
+  uint64_t victim = tags[idx*ways + lfu_index];
+  tags[idx*ways + lfu_index] = (addr >> idx_shift) | VALID;
   return victim;
 }
 
@@ -194,7 +206,6 @@ fa_cache_sim_t::fa_cache_sim_t(size_t ways, size_t linesz, const char* name)
 
 uint64_t* fa_cache_sim_t::check_tag(uint64_t addr)
 {
-  freq[addr >> idx_shift]++; // update frequency
   auto it = tags.find(addr >> idx_shift);
   return it == tags.end() ? NULL : &it->second;
 }
@@ -204,14 +215,10 @@ uint64_t fa_cache_sim_t::victimize(uint64_t addr)
   uint64_t old_tag = 0;
   if (tags.size() == ways)
   {
-    // least frequently used
-    std::pair<uint64_t, uint64_t> lst = *std::min_element(tags.begin(), tags.end(),
-      [this](const std::pair<uint64_t, uint64_t>& a, const std::pair<uint64_t, uint64_t>& b) {
-        return freq[a.first] < freq[b.first];
-    });
-
-    old_tag = lst.second;
-    tags.erase(lst.first);
+    auto it = tags.begin();
+    std::advance(it, lfsr.next() % ways);
+    old_tag = it->second;
+    tags.erase(it);
   }
   tags[addr >> idx_shift] = (addr >> idx_shift) | VALID;
   return old_tag;
