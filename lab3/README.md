@@ -42,12 +42,11 @@ After tracing down the cachesim source code , I found some most critical part of
 - in `cache_sim_t` class : 
     - `miss_handler`
     - `clean_invalidate`
-- in `fa_cache_sim_t` class :
-    - `tags` : ( the original is `std::map` data structure )
     - `check_tag` 
     - `victimize`
+    
 
-For implemetation , we just need to change `tags` member ( or add other helper members ) in `fa_cache_sim_t` with appropriate data structure depends on different cache policy .
+For implemetation , we just need to change `check_tag` and `victimize` methods ( or add other helper members ) in `cache_sim_t` with appropriate data structure depends on different cache policy .
 
 ## Implementation 
 An experienced classmate , [Chumy](https://github.com/Jimmy01240397)  wrote a brute force script to enumerate all possible `Set` ,`Way` , and `BlockSize` .
@@ -98,23 +97,25 @@ Miss Rate: 35.4987
 
 ### FIFO
 
-For `FIFO` ( first in first out ) I use `std::list` with `std::pair` as element where `.first` is tag and `.second` is data block .
-- update `tags` member :
+For `FIFO` ( first in first out ) I use `std::list` as a queue , and the elements record data block index.
+
 ```cpp
-class fa_cache_sim_t : public cache_sim_t
-{
- public:
-  fa_cache_sim_t(size_t ways, size_t linesz, const char* name);
-  uint64_t* check_tag(uint64_t addr);
-  uint64_t victimize(uint64_t addr);
- private:
-  static bool cmp(uint64_t a, uint64_t b);
-  // std::map<uint64_t, uint64_t> tags;
-  std::list<std::pair<uint64_t, uint64_t>> tags; // updated !!!
+class cache_sim_t : public cache_sim_t
+{  
+    // .... the rest is all same 
+    uint64_t write_misses;
+    uint64_t bytes_written;
+    uint64_t writebacks;
+
+    std::string name;
+    bool log;
+    std::list<uint64_t> que; // updated !!!
+
+    void init();
 };
 ```
 - update `check_tag` method : 
-    - using `std::find_if` ( should include `algorithm` ) to find tag
+    - using `push_back` to add data block in queue.
 - update `victimize` method : 
     - using `push_back` and `pop_back` as a FIFO queue
 
@@ -161,50 +162,53 @@ Miss Rate: 35.4987
 
 For `LFU` ( Least Frequently Used ) I add another member `freq` ( which type is `std::map` ) for counting element access frequency . 
 ```cpp
-class fa_cache_sim_t : public cache_sim_t
-{
- public:
-  fa_cache_sim_t(size_t ways, size_t linesz, const char* name);
-  uint64_t* check_tag(uint64_t addr);
-  uint64_t victimize(uint64_t addr);
- private:
-  static bool cmp(uint64_t a, uint64_t b);
-  std::map<uint64_t, uint64_t> tags;
-  std::map<uint64_t, uint64_t> freq; // updated !!!
+class cache_sim_t : public cache_sim_t
+{  
+    // .... the rest is all same 
+    uint64_t write_misses;
+    uint64_t bytes_written;
+    uint64_t writebacks;
+
+    std::string name;
+    bool log;
+    std::map<uint64_t,uint64_t> freq; // updated !!!
+
+    void init();
 };
 ```
 - update `check_tag` method : 
-    - increase `freq[addr >> idx_shift]`
+    - increase `freq[idx*ways + i]`
     - the rest is same as `ORIG`
 - update `victimize` method : 
-    - using `std::min_element` ( should include `algorithm` ) to find least frequncy used element
+    - initialize some variables and use a for-loop to find index of LFU element .
+    - update victimize block .
 
 #### Testing
 ```
 =======================================================================
 Data Cache Setting with: 1:8:8
-Miss Rate: 52.498 %
+Miss Rate: 50.3037 %
 =======================================================================
 Data Cache Setting with: 2:4:8
-Miss Rate: 50.1563 %
+Miss Rate: 50.4283 %
 =======================================================================
 Data Cache Setting with: 4:2:8
-Miss Rate: 50.3273 %
+Miss Rate: 50.9797 %
 =======================================================================
 Data Cache Setting with: 8:1:8
 Miss Rate: 52.0297 %
 =======================================================================
 Data Cache Setting with: 1:4:16
-Miss Rate: 39.0397 %
+Miss Rate: 43.3073 %
 =======================================================================
 Data Cache Setting with: 2:2:16
-Miss Rate: 39.0293 %
+Miss Rate: 42.6497 %
 =======================================================================
 Data Cache Setting with: 4:1:16
 Miss Rate: 40.45 %
 =======================================================================
 Data Cache Setting with: 1:2:32
-Miss Rate: 35.9197 %
+Miss Rate: 38.0477 %
 =======================================================================
 Data Cache Setting with: 2:1:32
 Miss Rate: 35.4987 %
@@ -220,53 +224,57 @@ Miss Rate: 35.4987
 
 ### LRU
 
-For `LRU` ( Least Recently Used ) I add another member `stamp` ( which type is `std::map` ) for counting element access frequency . 
+For `LRU` ( Least Recently Used ) I add another member `stamp` ( which type is `std::map` ) and `stamp_counter` ( as a timestamp ) for recording element access time . 
 ```cpp
-class fa_cache_sim_t : public cache_sim_t
-{
- public:
-  fa_cache_sim_t(size_t ways, size_t linesz, const char* name);
-  uint64_t* check_tag(uint64_t addr);
-  uint64_t victimize(uint64_t addr);
- private:
-  static bool cmp(uint64_t a, uint64_t b);
-  std::map<uint64_t, uint64_t> tags;
-  std::map<uint64_t, uint64_t> stamp; // updated !!!
-  uint64_t stamp_counter = 0;         // updated !!! 
+class cache_sim_t : public cache_sim_t
+{  
+    // .... the rest is all same 
+    uint64_t write_misses;
+    uint64_t bytes_written;
+    uint64_t writebacks;
+
+    std::string name;
+    bool log;
+
+    std::map<uint64_t, uint64_t> stamp; // updated !!!
+    uint64_t stamp_counter; // updated !!!
+
+    void init();
 };
 ```
 - update `check_tag` method : 
-    - increase `stamp_counter` and update to `freq[addr >> idx_shift]`
+    - increase `stamp_counter` and update to `stamp[idx*ways + i]`
     - the rest is same as `ORIG`
 - update `victimize` method : 
-    - using `std::min_element` ( should include `algorithm` ) to find least recently used element
+    - initialize some variables and use a for-loop to find index of LFU element .
+    - update victimize block .
 
 #### Testing
 ```
 =======================================================================
 Data Cache Setting with: 1:8:8
-Miss Rate: 48.898 %
+Miss Rate: 50.3037 %
 =======================================================================
 Data Cache Setting with: 2:4:8
-Miss Rate: 50.1563 %
+Miss Rate: 48.715 %
 =======================================================================
 Data Cache Setting with: 4:2:8
-Miss Rate: 50.3273 %
+Miss Rate: 49.307 %
 =======================================================================
 Data Cache Setting with: 8:1:8
 Miss Rate: 52.0297 %
 =======================================================================
 Data Cache Setting with: 1:4:16
-Miss Rate: 39.0397 %
+Miss Rate: 38.5147 %
 =======================================================================
 Data Cache Setting with: 2:2:16
-Miss Rate: 39.0293 %
+Miss Rate: 38.36 %
 =======================================================================
 Data Cache Setting with: 4:1:16
 Miss Rate: 40.45 %
 =======================================================================
 Data Cache Setting with: 1:2:32
-Miss Rate: 35.9197 %
+Miss Rate: 34.983 %
 =======================================================================
 Data Cache Setting with: 2:1:32
 Miss Rate: 35.4987 %
@@ -276,11 +284,41 @@ Miss Rate: 36.4023 %
 =======================================================================
 Policy: lru
 The best data cache setting is:
-Setting: Set = 2, Way = 1, BlockSize = 32
-Miss Rate: 35.4987
+Setting: Set = 1, Way = 2, BlockSize = 32
+Miss Rate: 34.983
 ```
 
+And turn out that `LRU` with `1:2:32` is the best miss rate setting !
+
+## Final Result 
+
+Final `config.conf` setting :
+```
+[cache]
+Set = 1
+Way = 2
+BlockSize = 32
+Policy = "lru"
+```
+Judging :
+```bash
+make score
+```
+Result : **`miss rate` lower than 35% !!!**
+```
+=======================================================================
+Policy: "lru"
+Data Cache Setting with: 1:2:32
+Miss Rate: 34.983 %
+```
+
+
 ## My tools
+
+My laptop doesn't have enough space to use `VMWare` to mount the required `.ova` environment . Thanks to my friend [@owen](https://github.com/owenowenisme/) lend me his laptop to finish this lab !
+
+The following is some tools help me sync code from develop env to production dev : 
+
 - `ngrok`
 ```
 ngrok tcp 22
@@ -289,9 +327,9 @@ ngrok tcp 22
 ```
 ssh USER@tcp://0.tcp.jp.ngrok.io -p PORT                            
 ```
-<!-- ssh ubuntu@tcp://0.tcp.jp.ngrok.io -p 14864                             -->
+<!-- ssh ubuntu@tcp://0.tcp.jp.ngrok.io -p 19112                             -->
 - `rsync`
 ```
 rsync -r -av -e "ssh SERVER_USER@0.tcp.jp.ngrok.io -p PORT" lab3 :SERVER_DIR_PATH --progress
 ```
-<!-- rsync -r -av -e "ssh ubuntu@0.tcp.jp.ngrok.io -p 14864" lab3 :/home/ubuntu/Desktop/Jason --progress -->
+<!-- rsync -r -av -e "ssh ubuntu@0.tcp.jp.ngrok.io -p 19112" lab3 :/home/ubuntu/Desktop/Jason --progress -->
