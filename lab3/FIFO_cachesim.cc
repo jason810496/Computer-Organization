@@ -107,9 +107,13 @@ uint64_t* cache_sim_t::check_tag(uint64_t addr)
   size_t idx = (addr >> idx_shift) & (sets-1);
   size_t tag = (addr >> idx_shift) | VALID;
 
-  for (size_t i = 0; i < ways; i++)
-    if (tag == (tags[idx*ways + i] & ~DIRTY))
+  for (size_t i = 0; i < ways; i++){
+    if (tag == (tags[idx*ways + i] & ~DIRTY)){
+      que.push_back(idx*ways + i);
       return &tags[idx*ways + i];
+    }
+  }
+    
 
   return NULL;
 }
@@ -117,8 +121,10 @@ uint64_t* cache_sim_t::check_tag(uint64_t addr)
 uint64_t cache_sim_t::victimize(uint64_t addr)
 {
   size_t idx = (addr >> idx_shift) & (sets-1);
-  size_t way = lfsr.next() % ways;
+  size_t way =  que.front() % ways;
   uint64_t victim = tags[idx*ways + way];
+  que.pop_front();
+  que.push_back(idx*ways + way);
   tags[idx*ways + way] = (addr >> idx_shift) | VALID;
   return victim;
 }
@@ -193,37 +199,20 @@ fa_cache_sim_t::fa_cache_sim_t(size_t ways, size_t linesz, const char* name)
 
 uint64_t* fa_cache_sim_t::check_tag(uint64_t addr)
 {
-  // auto it = tags.find(addr >> idx_shift);
-  // return it == tags.end() ? NULL : &it->second;
-
-  // map -> list<pair>
-  const uint64_t value = addr >> idx_shift;
-  auto it = std::find_if(tags.begin(), tags.end(),
-                        [value](std::pair<uint64_t, uint64_t> const &b) { 
-                            return b.first == value; 
-                        });
+  auto it = tags.find(addr >> idx_shift);
   return it == tags.end() ? NULL : &it->second;
 }
 
 uint64_t fa_cache_sim_t::victimize(uint64_t addr)
 {
-  // uint64_t old_tag = 0;
-  // if (tags.size() == ways)
-  // {
-  //   auto it = tags.begin();
-  //   std::advance(it, lfsr.next() % ways);
-  //   old_tag = it->second;
-  //   tags.erase(it);
-  // }
-  // tags[addr >> idx_shift] = (addr >> idx_shift) | VALID;
-  // return old_tag;
-
   uint64_t old_tag = 0;
   if (tags.size() == ways)
   {
-    old_tag = tags.front().second;
-    tags.pop_front();
+    auto it = tags.begin();
+    std::advance(it, lfsr.next() % ways);
+    old_tag = it->second;
+    tags.erase(it);
   }
-  tags.push_back(std::make_pair( addr >> idx_shift , (addr >> idx_shift)|VALID ));
+  tags[addr >> idx_shift] = (addr >> idx_shift) | VALID;
   return old_tag;
 }

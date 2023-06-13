@@ -7,7 +7,7 @@
 #include "common.h"
 #include <cstring>
 #include <string>
-// #include <map>
+#include <map>
 #include <list>
 #include <utility>
 #include <cstdint>
@@ -64,6 +64,7 @@ class cache_sim_t
 
   std::string name;
   bool log;
+  std::list<uint64_t> que;
 
   void init();
 };
@@ -76,8 +77,7 @@ class fa_cache_sim_t : public cache_sim_t
   uint64_t victimize(uint64_t addr);
  private:
   static bool cmp(uint64_t a, uint64_t b);
-  // std::map<uint64_t, uint64_t> tags;
-  std::list<std::pair<uint64_t, uint64_t>> tags;
+  std::map<uint64_t, uint64_t> tags;
 };
 
 class cache_memtracer_t : public memtracer_t
